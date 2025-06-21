@@ -61,3 +61,6 @@ This project uses raw sensor data (X, Y, Z axes) collected via the Phyphox app t
 - Built and trained ML model (logistic regression) using scikit-learn
 - Developed the GUI-based desktop application with segmentation + live prediction output
 - Created and tested real-time data scraping and classification via Selenium
+  
+
+
