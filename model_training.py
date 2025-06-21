@@ -11,7 +11,7 @@ from sklearn.pipeline import make_pipeline
 from sklearn.metrics import (accuracy_score, recall_score, confusion_matrix, ConfusionMatrixDisplay, roc_curve, RocCurveDisplay, roc_auc_score)
 import joblib
 
-#region ---------------------------------CREATE HDF5 FILE-----------------------------------------------
+#CREATE HDF5 FILE
 # Create h5py file for organization - this allows structured storage of raw, preprocessed, and segmented data
 with h5py.File("dataset.h5", "w") as f:
     # Create main data groups for different processing stages
@@ -38,9 +38,8 @@ def check_missing_values(name, df):
     """Print missing values and dash-based missing markers in the dataframe."""
     print(f"{name} NaNs:\n{df.isna().sum()}")
     print(f"{name} dashes: {(df == '-').sum().sum()}\n")
-#endregion
 
-#region ---------------------------------LOAD RAW DATA AND STORE IN HDF5-----------------------------------------------
+#LOAD RAW DATA AND STORE IN HDF5
 # Dictionary of raw data CSV files for each person and activity
 raw_dfs = {
     "lorenzo_walking": pd.read_csv("raw/lorenzo_walking_raw.csv"),
@@ -59,9 +58,8 @@ with h5py.File("dataset.h5", "a") as f:
         activity = name.split('_')[1]
         # Store raw data in HDF5
         f[f"Raw Data/{person}/{activity}"] = df.values
-#endregion
 
-#region ------------------------------PROCESS RAW DATA AND STORE IN HDF5-----------------------------------------------  
+#PROCESS RAW DATA AND STORE IN HDF5
 def preprocess_dataframe(df, window_size=51):
     """Filter data with rolling mean with bfill. Automatically detect time column so we skip it."""
     processed_df = df.copy()
@@ -87,7 +85,7 @@ for name, df in raw_dfs.items():
 for name, df in processed_dfs.items():
     file_name = f"{name}_processed.csv"
     df.to_csv(os.path.join('processed', file_name), index=False)
-    print(f"✅ Processed data saved: {file_name}")
+    print(f"Processed data saved: {file_name}")
 
 # Store processed data in HDF5 file for easy access
 with h5py.File("dataset.h5", "a") as f:
@@ -95,9 +93,8 @@ with h5py.File("dataset.h5", "a") as f:
         person = name.split('_')[0].capitalize()
         activity = name.split('_')[1]
         f[f"Pre-processed Data/{person}/{activity}"] = df.values
-#endregion
 
-#region ---------------------------------PLOT ALL RAW DATA (X, Y, Z AXES)-----------------------------------------------
+PLOT ALL RAW DATA (X, Y, Z AXES)
 # Plot all raw data for each axis in 3x2 grid (3 users, walking vs jumping)
 print("Plotting all raw data for each axis (X, Y, Z)...")
 
@@ -178,7 +175,7 @@ plt.tight_layout()
 plt.show()
 print("Raw data plots displayed.")
 
-#region ---------------------------------PLOT ALL PROCESSED DATA (X, Y, Z AXES)-----------------------------------------------
+PLOT ALL PROCESSED DATA (X, Y, Z AXES)
 # Plot all processed data for each axis in 3x2 grid (3 users, walking vs jumping)
 print("Plotting all processed data for each axis (X, Y, Z)...")
 
@@ -253,7 +250,7 @@ plt.tight_layout()
 plt.show()
 print("Processed data plots displayed.")
 
-#region ---------------------------------PLOT DATA (RAW vs FILTERED)-----------------------------------------------
+PLOT DATA (RAW vs FILTERED)
 fig_lorenzo, axes = plt.subplots(3, 2, figsize=(15, 10))
 ax1, ax2, ax3, ax4, ax5, ax6 = axes.flatten()
 fig_lorenzo.suptitle('Acceleration Processing', fontsize=16)
@@ -381,9 +378,8 @@ plt.legend()
 plt.grid(True)
 plt.tight_layout()
 plt.show()
-#endregion
 
-#region ---------------------------------SEGMENT DATA-----------------------------------------------
+SEGMENT DATA
 def segment_data_5s(data, window_size):
     """Splits data into segments of length window_size, skipping the time column."""
     segments = []
@@ -431,9 +427,8 @@ for name, df in processed_dfs.items():
 print("Segment shapes:")
 for name, array in segmented_arrays.items():
     print(f"{name}: {array.shape}")
-#endregion
 
-#region ---------------------------------EXTRACT FEATURES-----------------------------------------------
+EXTRACT FEATURES
 def extract_features(segment):
     '''Extract statistical features from a segment of data.'''
     features = {}
@@ -496,10 +491,9 @@ for name, feat_list in features_arrays.items():
 for name, df in features_dfs.items():
     out_file = os.path.join('segmented', f'{name}_segmented.csv')
     df.to_csv(out_file, index=False)
-    print(f"✅ Segmented data saved: {out_file}")
-#endregion
+    print(f"Segmented data saved: {out_file}")
 
-#region ---------------------------------CREATE FINAL DATASET-----------------------------------------------
+CREATE FINAL DATASET
 # Combine all feature DataFrames into a single dataset, adding activity labels
 final_dataset = pd.DataFrame()
 for name, df in features_dfs.items():
@@ -509,9 +503,8 @@ for name, df in features_dfs.items():
     final_dataset = pd.concat([final_dataset, df], axis=0, ignore_index=True)
 
 print(f"Final dataset shape: {final_dataset.shape}")  # (rows, columns)
-#endregion
 
-#region ---------------------------------SPECIFY WHICH AXIS TO TRAIN WITH-----------------------------------------------
+#SPECIFY WHICH AXIS TO TRAIN WITH
 # Organize columns by axis type to help with feature selection and analysis
 
 # Get all feature columns (exclude the activity/label column)
@@ -537,9 +530,8 @@ print("Abs features:", abs_cols)
 
 # Reorganize final dataset to group features by axis type
 final_dataset = final_dataset[x_cols + y_cols + z_cols + abs_cols + ['activity']]
-#endregion
 
-#region ---------------------------------TRAIN LOGISTIC REGRESSION-----------------------------------------------
+#TRAIN LOGISTIC REGRESSION
 # Prepare data for model training by separating features and labels
 final_data = final_dataset.drop('activity', axis=1)
 final_labels = final_dataset['activity']
@@ -605,9 +597,8 @@ print(f"AUC: {auc}\n")
 correlation = final_dataset.corr()['activity'].sort_values(ascending=False)
 print("Correlation of final dataset:")
 print(correlation)
-#endregion
 
-#region ---------------------------------PLOT CORRELATION BAR GRAPH-----------------------------------------------
+#PLOT CORRELATION BAR GRAPH
 # Visualize correlation between each feature and the activity label
 fig_correlation, ax = plt.subplots(figsize=(15, 8))
 ax.bar(correlation.index, correlation.values)
@@ -620,8 +611,7 @@ plt.xticks(rotation=90, ha='right', fontsize=10)
 plt.yticks(fontsize=10)
 plt.tight_layout()
 plt.show()
-#endregion
 
 # Save the final model again to ensure it's stored
 joblib.dump(clf, 'activity_classifier.pkl')
-print("✅Model saved as activity_classifier.pkl")
+print("Model saved as activity_classifier.pkl")
